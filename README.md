@@ -1,4 +1,4 @@
-# 🍔 Bitenation
+# 🍔 Bitenation 🍔
 
 A Django-powered web application with integrated M-Pesa (Safaricom) payment processing.
 
@@ -14,7 +14,7 @@ A Django-powered web application with integrated M-Pesa (Safaricom) payment proc
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
