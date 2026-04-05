@@ -9,7 +9,7 @@ A Django-powered web application with integrated M-Pesa (Safaricom) payment proc
 - Django 5.0+ web framework
 - M-Pesa STK Push payment integration via the Safaricom Daraja API
 - Email notification support
-- SQLite database (easily swappable for PostgreSQL/MySQL)
+- SQLite database
 - Environment-based configuration for secure secrets management
 
 ---
