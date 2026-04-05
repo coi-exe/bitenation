@@ -1,0 +1,92 @@
+{% extends "core/base.html" %}
+{% block title %}My Orders – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.order-card { background:white; border-radius:12px; border:1px solid var(--border); padding:1.5rem; margin-bottom:1rem; border-left:5px solid var(--primary); }
+.order-number { font-family:'Libre Baskerville',serif; font-weight:700; color:var(--primary); }
+.timeline-dot { width:14px; height:14px; border-radius:50%; background:var(--border); border:3px solid white; box-shadow:0 0 0 2px var(--border); }
+.timeline-dot.active { background:var(--primary); box-shadow:0 0 0 2px var(--primary); }
+.timeline-dot.done { background:#10b981; box-shadow:0 0 0 2px #10b981; }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1><i class="bi bi-receipt me-3" style="color:var(--accent);"></i>My Orders</h1>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {% if orders %}
+  <div class="col-lg-9">
+    {% for order in orders %}
+    <div class="order-card">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <div class="order-number">{{ order.order_number }}</div>
+          <div class="text-muted small mt-1">{{ order.created_at|date:"d M Y, h:i A" }}</div>
+          {% if order.delivery_area %}
+          <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ order.delivery_area.name }}</div>
+          {% endif %}
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge-{{ order.payment_status }}">💳 {{ order.get_payment_status_display }}</span>
+          <span class="badge-{{ order.delivery_status }}">🚚 {{ order.get_delivery_status_display }}</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        {% for oi in order.items.all %}
+        <span class="badge bg-light text-dark me-1 mb-1" style="font-weight:500;padding:6px 12px;">
+          {{ oi.food_name }} × {{ oi.quantity }}
+        </span>
+        {% endfor %}
+      </div>
+
+      <!-- Progress bar -->
+      <div class="p-3 mb-3" style="background:#f8f9fa;border-radius:10px;">
+        <div class="d-flex justify-content-between align-items-center position-relative">
+          <div style="position:absolute;top:50%;left:10%;right:10%;height:2px;background:var(--border);z-index:0;transform:translateY(-50%);"></div>
+          <div class="d-flex justify-content-between w-100 position-relative" style="z-index:1;">
+            <div class="text-center flex-fill">
+              <div class="timeline-dot mx-auto mb-1 {% if order.payment_status == 'paid' %}done{% endif %}"></div>
+              <div class="small fw-bold" style="font-size:0.72rem;">Paid</div>
+            </div>
+            <div class="text-center flex-fill">
+              <div class="timeline-dot mx-auto mb-1
+                {% if order.delivery_status == 'preparing' %}active
+                {% elif order.delivery_status in 'on_the_way,delivered' %}done{% endif %}"></div>
+              <div class="small fw-bold" style="font-size:0.72rem;">Preparing</div>
+            </div>
+            <div class="text-center flex-fill">
+              <div class="timeline-dot mx-auto mb-1
+                {% if order.delivery_status == 'on_the_way' %}active
+                {% elif order.delivery_status == 'delivered' %}done{% endif %}"></div>
+              <div class="small fw-bold" style="font-size:0.72rem;">On the Way</div>
+            </div>
+            <div class="text-center flex-fill">
+              <div class="timeline-dot mx-auto mb-1 {% if order.delivery_status == 'delivered' %}done{% endif %}"></div>
+              <div class="small fw-bold" style="font-size:0.72rem;">Delivered</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="fw-bold fs-5" style="color:var(--primary);">KSh {{ order.total|floatformat:0 }}</span>
+        <a href="{% url 'order_detail' order.id %}" class="btn btn-outline-secondary btn-sm">
+          Details <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-bag-x display-2 text-muted mb-3 d-block"></i>
+    <h4 class="text-muted">No orders yet</h4>
+    <a href="{% url 'menu' %}" class="btn btn-primary btn-lg px-5 mt-2"><i class="bi bi-bag me-2"></i>Browse Menu</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

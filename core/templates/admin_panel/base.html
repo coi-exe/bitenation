@@ -1,0 +1,59 @@
+{% extends "core/base.html" %}
+{% block extra_styles %}
+.admin-layout { display:flex; min-height:calc(100vh - 64px); }
+.admin-sidebar { background:var(--dark); width:240px; padding:1.5rem 0; flex-shrink:0; }
+.admin-sidebar .nav-link { color:rgba(255,255,255,0.7) !important; padding:0.7rem 1.5rem !important;
+  display:flex; align-items:center; gap:0.7rem; font-size:0.9rem; border-radius:0; }
+.admin-sidebar .nav-link:hover, .admin-sidebar .nav-link.active { background:rgba(232,98,10,0.2); color:white !important; }
+.admin-sidebar .nav-link i { font-size:1.1rem; width:20px; }
+.admin-main { flex:1; padding:2rem; background:#f4f6f9; overflow-x:auto; }
+.sidebar-label { color:rgba(255,255,255,0.35); font-size:0.7rem; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; padding:1rem 1.5rem 0.3rem; }
+{% block admin_extra_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div class="px-4 mb-3">
+      <div style="font-family:'Libre Baskerville',serif;color:white;font-size:1.1rem;">🍊 Admin Panel</div>
+    </div>
+    <div class="sidebar-label">Overview</div>
+    <a class="nav-link {% block dash_active %}{% endblock %}" href="{% url 'admin_dashboard' %}">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+    <div class="sidebar-label">Manage</div>
+    <a class="nav-link {% block menu_active %}{% endblock %}" href="{% url 'admin_menu' %}">
+      <i class="bi bi-menu-button-wide"></i> Menu Items
+    </a>
+    <a class="nav-link {% block orders_active %}{% endblock %}" href="{% url 'admin_orders' %}">
+      <i class="bi bi-receipt"></i> Orders
+    </a>
+    <a class="nav-link {% block areas_active %}{% endblock %}" href="{% url 'admin_areas' %}">
+      <i class="bi bi-geo-alt"></i> Delivery Areas
+    </a>
+    <a class="nav-link {% block users_active %}{% endblock %}" href="{% url 'admin_users' %}">
+      <i class="bi bi-people"></i> Users
+    </a>
+    <div class="sidebar-label">Staff</div>
+    <a class="nav-link" href="{% url 'kitchen_dashboard' %}">
+      <i class="bi bi-fire"></i> Kitchen View
+    </a>
+    <a class="nav-link" href="{% url 'delivery_dashboard' %}">
+      <i class="bi bi-truck"></i> Delivery View
+    </a>
+    <div class="sidebar-label">Site</div>
+    <a class="nav-link" href="{% url 'index' %}"><i class="bi bi-house"></i> View Site</a>
+    <a class="nav-link" href="/admin/" target="_blank"><i class="bi bi-shield-lock"></i> Django Admin</a>
+    <a class="nav-link text-danger logout-link" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+  </div>
+  <div class="admin-main">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3">
+      {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% block admin_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

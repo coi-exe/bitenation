@@ -1,0 +1,146 @@
+{% extends "core/base.html" %}
+{% block title %}Create Account – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.auth-card { background:white; border-radius:16px; padding:2.5rem; border:1px solid var(--border); max-width:500px; width:100%; }
+.auth-wrap { min-height:calc(100vh - 64px); display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); padding:2rem; }
+.auth-brand { font-family:'Libre Baskerville',serif; font-size:2rem; text-align:center; margin-bottom:0.3rem; }
+.pw-rule { font-size:0.78rem; display:flex; align-items:center; gap:0.4rem; color:var(--text-muted); transition:color 0.2s; }
+.pw-rule.ok { color:#10b981; }
+.pw-rule i { font-size:0.8rem; }
+.strength-bar { height:4px; border-radius:2px; transition:width 0.3s, background 0.3s; width:0%; background:#e8620a; }
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand">Bite <span style="color:var(--primary);">Nation</span></div>
+    <p class="text-center text-muted mb-4 small">Create your free account</p>
+
+    <form method="POST" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Full Name</label>
+        <input type="text" name="name" class="form-control" required
+          placeholder="John Kamau" value="{{ name|default:'' }}"
+          pattern="[a-zA-Z\s]{2,50}" title="Letters only, 2–50 characters">
+        <div class="form-text">Letters only, 2–50 characters.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Email Address</label>
+        <input type="email" name="email" class="form-control" required
+          placeholder="you@example.com" value="{{ email|default:'' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Phone Number <span class="text-muted fw-normal small">(Kenyan number for M-Pesa)</span></label>
+        <div class="input-group">
+          <span class="input-group-text">🇰🇪</span>
+          <input type="tel" name="phone" class="form-control" required
+            placeholder="0712 345 678" value="{{ phone|default:'' }}">
+        </div>
+        <div class="form-text">Format: 07XX XXX XXX or 01XX XXX XXX</div>
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label fw-bold">Password</label>
+        <div class="input-group">
+          <input type="password" name="password" class="form-control" id="pwInput" required
+            placeholder="Create a strong password" minlength="8" oninput="checkPw(this.value)">
+          <button type="button" class="btn btn-outline-secondary" onclick="toggleVis('pwInput','eyeIcon1')">
+            <i class="bi bi-eye" id="eyeIcon1"></i>
+          </button>
+        </div>
+        {# Strength bar #}
+        <div class="mt-2" style="background:#e8e8e8;border-radius:2px;height:4px;">
+          <div class="strength-bar" id="strengthBar"></div>
+        </div>
+        {# Rules #}
+        <div class="mt-2 d-flex flex-wrap gap-2">
+          <div class="pw-rule" id="r-len"><i class="bi bi-x-circle-fill"></i> 8+ chars</div>
+          <div class="pw-rule" id="r-upper"><i class="bi bi-x-circle-fill"></i> Uppercase</div>
+          <div class="pw-rule" id="r-lower"><i class="bi bi-x-circle-fill"></i> Lowercase</div>
+          <div class="pw-rule" id="r-num"><i class="bi bi-x-circle-fill"></i> Number</div>
+          <div class="pw-rule" id="r-sym"><i class="bi bi-x-circle-fill"></i> Symbol</div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-bold">Confirm Password</label>
+        <div class="input-group">
+          <input type="password" name="confirm_password" class="form-control" id="pwConfirm" required
+            placeholder="Repeat password" oninput="checkMatch()">
+          <button type="button" class="btn btn-outline-secondary" onclick="toggleVis('pwConfirm','eyeIcon2')">
+            <i class="bi bi-eye" id="eyeIcon2"></i>
+          </button>
+        </div>
+        <div id="matchMsg" class="form-text"></div>
+      </div>
+
+      <div class="mb-3 p-3 rounded" style="background:#fff3ec;border:1px solid #fbd7b8;font-size:0.82rem;">
+        <i class="bi bi-envelope-check me-2" style="color:var(--primary);"></i>
+        A <strong>verification email</strong> will be sent to your address. You must verify before logging in.
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold" id="submitBtn">
+        <i class="bi bi-person-plus me-2"></i>Create Account
+      </button>
+    </form>
+
+    <hr class="my-4">
+    <p class="text-center mb-0 small">
+      Already have an account? <a href="{% url 'login' %}" class="fw-bold" style="color:var(--primary);">Sign in →</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleVis(inputId, iconId) {
+  const inp = document.getElementById(inputId);
+  const ico = document.getElementById(iconId);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  ico.className = inp.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+
+function checkPw(val) {
+  const rules = {
+    'r-len':   val.length >= 8,
+    'r-upper': /[A-Z]/.test(val),
+    'r-lower': /[a-z]/.test(val),
+    'r-num':   /\d/.test(val),
+    'r-sym':   /[!@#$%^&*(),.?":{}|<>_\-]/.test(val),
+  };
+  let score = 0;
+  for (const [id, ok] of Object.entries(rules)) {
+    const el = document.getElementById(id);
+    el.classList.toggle('ok', ok);
+    el.querySelector('i').className = ok ? 'bi bi-check-circle-fill' : 'bi bi-x-circle-fill';
+    if (ok) score++;
+  }
+  const bar = document.getElementById('strengthBar');
+  const colors = ['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
+  bar.style.width = (score * 20) + '%';
+  bar.style.background = colors[score - 1] || '#e8e8e8';
+  checkMatch();
+}
+
+function checkMatch() {
+  const pw  = document.getElementById('pwInput').value;
+  const cf  = document.getElementById('pwConfirm').value;
+  const msg = document.getElementById('matchMsg');
+  if (!cf) { msg.textContent = ''; return; }
+  if (pw === cf) {
+    msg.textContent = '✅ Passwords match';
+    msg.style.color = '#10b981';
+  } else {
+    msg.textContent = '❌ Passwords do not match';
+    msg.style.color = '#ef4444';
+  }
+}
+</script>
+{% endblock %}

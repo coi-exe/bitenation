@@ -1,0 +1,84 @@
+{% extends "core/base.html" %}
+{% block title %}Verify Login – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.auth-card { background:white; border-radius:16px; padding:2.5rem; border:1px solid var(--border); max-width:420px; width:100%; }
+.auth-wrap { min-height:calc(100vh - 64px); display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); padding:2rem; }
+.otp-inputs { display:flex; gap:10px; justify-content:center; margin:1.5rem 0; }
+.otp-inputs input { width:48px; height:56px; text-align:center; font-size:1.5rem; font-weight:700;
+  border:2px solid var(--border); border-radius:10px; transition:border-color 0.2s; }
+.otp-inputs input:focus { border-color:var(--primary); outline:none; }
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card text-center">
+    <div style="font-size:3rem; margin-bottom:0.5rem;">📧</div>
+    <h4 class="fw-bold mb-1">Check your email</h4>
+    <p class="text-muted small mb-0">We sent a 6-digit code to</p>
+    <p class="fw-bold mb-3">{{ email }}</p>
+    <p class="text-muted small">Enter the code below. It expires in <strong>10 minutes</strong>.</p>
+
+    <form method="POST" id="otpForm">
+      {% csrf_token %}
+      <div class="otp-inputs" id="otpBoxes">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="\d" autocomplete="off" id="o0">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="\d" autocomplete="off" id="o1">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="\d" autocomplete="off" id="o2">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="\d" autocomplete="off" id="o3">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="\d" autocomplete="off" id="o4">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="\d" autocomplete="off" id="o5">
+      </div>
+      <input type="hidden" name="otp" id="otpHidden">
+      <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold">
+        <i class="bi bi-shield-check me-2"></i>Verify
+      </button>
+    </form>
+
+    <div class="mt-4">
+      <p class="text-muted small mb-2">Didn't get it?</p>
+      <a href="{% url 'resend_otp' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-clockwise me-1"></i>Resend code
+      </a>
+      <a href="{% url 'login' %}" class="btn btn-link btn-sm text-muted">Use a different account</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const boxes = Array.from({length:6}, (_,i) => document.getElementById('o'+i));
+
+boxes.forEach((box, i) => {
+  box.addEventListener('input', e => {
+    const val = e.target.value.replace(/\D/g,'');
+    e.target.value = val;
+    if (val && i < 5) boxes[i+1].focus();
+    updateHidden();
+  });
+  box.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !e.target.value && i > 0) {
+      boxes[i-1].focus();
+      boxes[i-1].value = '';
+      updateHidden();
+    }
+  });
+  box.addEventListener('paste', e => {
+    e.preventDefault();
+    const digits = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
+    digits.split('').forEach((d,j) => { if (boxes[j]) boxes[j].value = d; });
+    if (boxes[digits.length - 1]) boxes[Math.min(digits.length, 5)].focus();
+    updateHidden();
+    if (digits.length === 6) document.getElementById('otpForm').submit();
+  });
+});
+
+function updateHidden() {
+  document.getElementById('otpHidden').value = boxes.map(b => b.value).join('');
+}
+
+boxes[0].focus();
+</script>
+{% endblock %}

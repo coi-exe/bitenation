@@ -1,0 +1,106 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Delivery Areas – Bite Nation Admin{% endblock %}
+{% block areas_active %}active{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0" style="font-family:'Libre Baskerville',serif;">Delivery Areas</h2>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAreaModal">
+    <i class="bi bi-plus-lg me-2"></i>Add Area
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead style="background:var(--dark);color:white;">
+        <tr>
+          <th class="py-3 px-4">Area Name</th>
+          <th class="py-3">Delivery Fee (KSh)</th>
+          <th class="py-3">Status</th>
+          <th class="py-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for area in areas %}
+        <tr>
+          <td class="px-4 fw-bold">{{ area.name }}</td>
+          <td class="fw-bold" style="color:var(--primary);">KSh {{ area.delivery_fee|floatformat:0 }}</td>
+          <td>
+            {% if area.is_active %}
+            <span class="badge-available">Active</span>
+            {% else %}
+            <span class="badge-sold_out">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editArea{{ area.id }}">
+              <i class="bi bi-pencil"></i> Edit
+            </button>
+            <form method="POST" action="{% url 'delete_area' area.id %}" onsubmit="return confirm('Delete {{ area.name }}?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Area Modal -->
+<div class="modal fade" id="addAreaModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--primary);color:white;">
+        <h5 class="modal-title">Add Delivery Area</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'admin_areas' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label fw-bold">Area Name</label><input type="text" name="name" class="form-control" required placeholder="e.g., Mweiga"></div>
+          <div class="mb-3"><label class="form-label fw-bold">Delivery Fee (KSh)</label><input type="number" step="0.01" name="delivery_fee" class="form-control" value="100" required></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Area</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Area Modals -->
+{% for area in areas %}
+<div class="modal fade" id="editArea{{ area.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--dark);color:white;">
+        <h5 class="modal-title">Edit: {{ area.name }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'admin_areas' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="area_id" value="{{ area.id }}">
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label fw-bold">Area Name</label><input type="text" name="name" class="form-control" value="{{ area.name }}" required></div>
+          <div class="mb-3"><label class="form-label fw-bold">Delivery Fee (KSh)</label><input type="number" step="0.01" name="delivery_fee" class="form-control" value="{{ area.delivery_fee }}" required></div>
+          <div class="form-check">
+            <input type="checkbox" name="is_active" class="form-check-input" value="1" {% if area.is_active %}checked{% endif %}>
+            <label class="form-check-label">Active (available for customers)</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

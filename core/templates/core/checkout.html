@@ -1,0 +1,221 @@
+{% extends "core/base.html" %}
+{% block title %}Checkout – Bite Nation{% endblock %}
+{% load static %}
+
+{% block extra_styles %}
+.checkout-card { background:white; border-radius:14px; padding:2rem; border:1px solid var(--border); }
+.mpesa-logo { background:#00a550; color:white; border-radius:8px; padding:6px 14px; font-weight:800; font-size:1.1rem; display:inline-block; }
+.phone-anim { font-size:3rem; animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1><i class="bi bi-phone me-3" style="color:var(--accent);"></i>Checkout</h1>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="checkout-card">
+        <h5 class="fw-bold mb-3"><i class="bi bi-geo-alt-fill me-2" style="color:var(--primary);"></i>Delivery Details</h5>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Delivery Area</label>
+          <select id="areaSelect" class="form-select form-select-lg" onchange="updateFee()">
+            <option value="">Select area...</option>
+            {% for area in areas %}
+            <option value="{{ area.id }}" data-fee="{{ area.delivery_fee }}">
+              {{ area.name }} – KSh {{ area.delivery_fee|floatformat:0 }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Full Name</label>
+          <input type="text" class="form-control" id="deliveryName" value="{{ user.first_name }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">M-Pesa Phone Number</label>
+          <div class="input-group">
+            <span class="input-group-text">🇰🇪</span>
+            <input type="tel" class="form-control" id="deliveryPhone" value="{{ user.phone }}" placeholder="07XX XXX XXX" required>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Delivery Address</label>
+          <textarea class="form-control" id="deliveryAddress" rows="2" required placeholder="Estate, building, house number">{{ user.address }}</textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Special Instructions <span class="text-muted fw-normal small">(optional)</span></label>
+          <textarea class="form-control" id="deliveryNotes" rows="2" placeholder="Any allergies or special requests?"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="checkout-card">
+        <h5 class="fw-bold mb-3"><i class="bi bi-receipt me-2" style="color:var(--primary);"></i>Order Summary</h5>
+        <div id="orderSummaryItems"></div>
+        <hr>
+        <div class="d-flex justify-content-between mb-1">
+          <span class="text-muted">Subtotal</span>
+          <span class="fw-bold" id="ckSubtotal">—</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+          <span class="text-muted">Delivery Fee</span>
+          <span class="fw-bold" id="ckDelivery">—</span>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between mb-4">
+          <span class="fw-bold fs-5">Total</span>
+          <span class="fw-bold fs-5" style="color:var(--primary);" id="ckTotal">—</span>
+        </div>
+        <div class="p-3 mb-3" style="background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="mpesa-logo">M-PESA</span>
+            <span class="fw-bold">STK Push</span>
+          </div>
+          <p class="text-muted mb-0 small">A payment request will be sent to your M-Pesa line. Enter your PIN when prompted.</p>
+        </div>
+        <button class="btn btn-primary w-100 btn-lg fw-bold" id="payBtn" onclick="initiatePayment()">
+          <i class="bi bi-phone me-2"></i>Pay Now via M-Pesa
+        </button>
+        <a href="{% url 'cart' %}" class="btn btn-outline-secondary w-100 mt-2">← Back to Cart</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;overflow:hidden;">
+      <div class="modal-header" style="background:#00a550;">
+        <h5 class="modal-title fw-bold text-white"><span class="mpesa-logo me-2">M-PESA</span> Payment Pending</h5>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div class="phone-anim mb-3">📱</div>
+        <h5 class="fw-bold mb-2">Check Your Phone!</h5>
+        <p class="text-muted mb-3">STK Push sent to<br><strong id="modalPhone"></strong></p>
+        <div class="alert alert-warning text-start">
+          <i class="bi bi-info-circle me-2"></i>Enter your <strong>M-Pesa PIN</strong> to complete payment. Do not close this page.
+        </div>
+        <div class="spinner-border text-success my-2" role="status"></div>
+        <p class="small text-muted mt-2" id="modalStatus">Waiting for confirmation...</p>
+        <div id="demoPayDiv" class="mt-3" style="display:none;">
+          <p class="small text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Demo mode active.</p>
+          <a href="#" id="demoPayLink" class="btn btn-success btn-sm px-4 fw-bold">✅ Simulate Successful Payment</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let deliveryFee = 100;
+let selectedAreaId = '';
+
+function updateFee() {
+  const sel = document.getElementById('areaSelect');
+  const opt = sel.options[sel.selectedIndex];
+  deliveryFee = parseFloat(opt.dataset.fee) || 100;
+  selectedAreaId = sel.value;
+  renderSummary();
+}
+
+function renderSummary() {
+  const cart = Cart.get();
+  if (cart.length === 0) { window.location = '{% url "menu" %}'; return; }
+  document.getElementById('orderSummaryItems').innerHTML = cart.map(i =>
+    `<div class="d-flex justify-content-between mb-2">
+       <span>${i.name} <span class="text-muted">x${i.qty}</span></span>
+       <span class="fw-bold">KSh ${(i.price * i.qty).toFixed(0)}</span>
+     </div>`
+  ).join('');
+  const sub = Cart.total();
+  document.getElementById('ckSubtotal').textContent = `KSh ${sub.toFixed(0)}`;
+  document.getElementById('ckDelivery').textContent = `KSh ${deliveryFee}`;
+  document.getElementById('ckTotal').textContent = `KSh ${(sub + deliveryFee).toFixed(0)}`;
+}
+
+(function() {
+  // restore area from cart page
+  const savedArea = localStorage.getItem('bn_area_id');
+  if (savedArea) {
+    const sel = document.getElementById('areaSelect');
+    sel.value = savedArea;
+    updateFee();
+  } else {
+    renderSummary();
+  }
+})();
+
+async function initiatePayment() {
+  const phone = document.getElementById('deliveryPhone').value.trim();
+  const address = document.getElementById('deliveryAddress').value.trim();
+  const notes = document.getElementById('deliveryNotes').value.trim();
+  if (!phone || !address) { showToast('Please fill in all required fields.', 'danger'); return; }
+  if (!selectedAreaId) { showToast('Please select a delivery area.', 'danger'); return; }
+
+  const btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending STK Push...';
+
+  try {
+    const resp = await fetch('{% url "checkout" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+      body: JSON.stringify({
+        cart: Cart.get().map(i => ({id: i.id, name: i.name, qty: i.qty})),
+        address, phone, notes, area_id: selectedAreaId,
+      })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      document.getElementById('modalPhone').textContent = phone;
+      if (data.checkout_request_id.startsWith('DEMO_')) {
+        document.getElementById('demoPayDiv').style.display = 'block';
+        document.getElementById('demoPayLink').href = `/demo/pay/${data.order_number}/`;
+        document.getElementById('modalStatus').textContent = 'Demo mode active.';
+      }
+      new bootstrap.Modal(document.getElementById('paymentModal')).show();
+      startPolling(data.order_number);
+    } else {
+      showToast(data.message || 'Payment failed.', 'danger');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-phone me-2"></i>Pay Now via M-Pesa';
+    }
+  } catch(e) {
+    showToast('Network error. Please try again.', 'danger');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-phone me-2"></i>Pay Now via M-Pesa';
+  }
+}
+
+function startPolling(orderNumber) {
+  let attempts = 0;
+  const iv = setInterval(async () => {
+    attempts++;
+    try {
+      const r = await fetch(`/api/payment-status/${orderNumber}/`);
+      const data = await r.json();
+      document.getElementById('modalStatus').textContent = `Checking... (${attempts * 5}s)`;
+      if (data.payment_status === 'paid') {
+        clearInterval(iv);
+        document.getElementById('modalStatus').textContent = '✅ Payment confirmed!';
+        Cart.clear();
+        localStorage.removeItem('bn_area_id');
+        setTimeout(() => { window.location = '{% url "my_orders" %}'; }, 1500);
+      } else if (data.payment_status === 'failed') {
+        clearInterval(iv);
+        document.getElementById('modalStatus').textContent = '❌ Payment failed. Please try again.';
+      }
+      if (attempts > 24) { clearInterval(iv); document.getElementById('modalStatus').textContent = 'Timed out. Check your orders.'; }
+    } catch(e) {}
+  }, 5000);
+}
+</script>
+{% endblock %}

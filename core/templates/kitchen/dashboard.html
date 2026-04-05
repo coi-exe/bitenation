@@ -1,0 +1,78 @@
+{% extends "core/base.html" %}
+{% block title %}Kitchen – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.kitchen-header { background:linear-gradient(135deg,#7c2d12,#c2410c); color:white; padding:2.5rem 0; margin-bottom:2rem; }
+.order-card { background:white; border-radius:14px; border:1px solid var(--border); padding:1.5rem; margin-bottom:1.2rem;
+  border-left:6px solid var(--primary); box-shadow:0 2px 12px rgba(0,0,0,0.07); }
+.avatar { width:48px; height:48px; border-radius:50%; background:var(--primary); color:white;
+  display:flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:700; flex-shrink:0; }
+{% endblock %}
+
+{% block content %}
+<div class="kitchen-header">
+  <div class="container">
+    <h1 style="font-family:'Libre Baskerville',serif;"><i class="bi bi-fire me-3" style="color:var(--accent);"></i>Kitchen Dashboard</h1>
+    <p class="mb-0 mt-2" style="opacity:0.8;">{{ orders|length }} order{{ orders|length|pluralize }} waiting to be prepared</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {% if orders %}
+    {% for order in orders %}
+    <div class="order-card">
+      <div class="d-flex gap-3 align-items-start">
+        <div class="avatar">{{ order.user.first_name.0|default:order.user.username.0|upper }}</div>
+        <div class="flex-grow-1">
+          <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+            <div>
+              <code class="fw-bold fs-6" style="color:var(--primary);">{{ order.order_number }}</code>
+              <span class="text-muted small ms-2">{{ order.created_at|date:"d M, H:i" }}</span>
+            </div>
+            <span class="fw-bold" style="color:var(--primary);font-size:1.1rem;">KSh {{ order.total|floatformat:0 }}</span>
+          </div>
+
+          <div class="fw-bold mb-1">{{ order.user.first_name|default:order.user.username }}</div>
+          <div class="mb-1 small">
+            <i class="bi bi-telephone me-1 text-muted"></i>
+            <a href="tel:{{ order.delivery_phone }}" class="text-decoration-none fw-bold" style="color:var(--primary);">{{ order.delivery_phone }}</a>
+          </div>
+          <div class="mb-1 small text-muted">
+            <i class="bi bi-geo-alt me-1"></i> {{ order.delivery_address }}
+            {% if order.delivery_area %} <span class="badge bg-light text-dark ms-1">{{ order.delivery_area.name }}</span>{% endif %}
+          </div>
+
+          <div class="mb-3 mt-2">
+            <strong class="small">Items to prepare:</strong><br>
+            {% for oi in order.items.all %}
+            <span class="badge me-1 mb-1" style="background:var(--primary-light);color:var(--primary-dark);font-size:0.85rem;padding:6px 12px;">
+              🍽️ {{ oi.food_name }} × {{ oi.quantity }}
+            </span>
+            {% endfor %}
+          </div>
+
+          {% if order.notes %}
+          <div class="alert alert-warning py-2 px-3 mb-3 small">
+            <i class="bi bi-chat-left-text me-2"></i><strong>Note:</strong> {{ order.notes }}
+          </div>
+          {% endif %}
+
+          <form method="POST" action="{% url 'mark_preparing' order.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning fw-bold px-4">
+              <i class="bi bi-fire me-2"></i>Mark as Preparing
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="text-center py-5">
+    <div style="font-size:4rem;" class="mb-3">✅</div>
+    <h4 class="fw-bold">Kitchen is clear!</h4>
+    <p class="text-muted">No paid orders waiting to be prepared right now.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

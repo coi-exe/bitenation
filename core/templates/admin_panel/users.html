@@ -1,0 +1,70 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Users – Bite Nation Admin{% endblock %}
+{% block users_active %}active{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0" style="font-family:'Libre Baskerville',serif;">Users</h2>
+  <span class="text-muted small">{{ users|length }} total</span>
+</div>
+
+<div class="card p-0" style="overflow:hidden;">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead style="background:var(--dark);color:white;">
+        <tr>
+          <th class="py-3 px-4">User</th>
+          <th class="py-3">Phone</th>
+          <th class="py-3">Role</th>
+          <th class="py-3">Joined</th>
+          <th class="py-3">Change Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="px-4">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:38px;height:38px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">
+                {{ u.first_name.0|default:u.username.0|upper }}
+              </div>
+              <div>
+                <div class="fw-bold">{{ u.first_name|default:u.username }}</div>
+                <div class="text-muted small">{{ u.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="small">{{ u.phone|default:"—" }}</td>
+          <td>
+            <span class="badge rounded-pill px-3 
+              {% if u.role == 'admin' %}bg-danger
+              {% elif u.role == 'kitchen' %}bg-warning text-dark
+              {% elif u.role == 'delivery' %}bg-primary
+              {% else %}bg-secondary{% endif %}">
+              {{ u.get_role_display }}
+            </span>
+          </td>
+          <td class="text-muted small">{{ u.date_joined|date:"d M Y" }}</td>
+          <td>
+            {% if u.id != request.user.id %}
+            <form method="POST" action="{% url 'update_user_role' u.id %}" class="d-flex gap-2 align-items-center">
+              {% csrf_token %}
+              <select name="role" class="form-select form-select-sm" style="width:140px;">
+                <option value="customer" {% if u.role == 'customer' %}selected{% endif %}>Customer</option>
+                <option value="kitchen" {% if u.role == 'kitchen' %}selected{% endif %}>Kitchen Admin</option>
+                <option value="delivery" {% if u.role == 'delivery' %}selected{% endif %}>Delivery Admin</option>
+                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+            </form>
+            {% else %}
+            <span class="text-muted small">(You)</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

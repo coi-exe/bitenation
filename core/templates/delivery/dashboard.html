@@ -1,0 +1,208 @@
+{% extends "core/base.html" %}
+{% block title %}Delivery – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.delivery-header { background:linear-gradient(135deg,#0f2027,#203a43,#2c5364); color:white; padding:2.5rem 0; margin-bottom:2rem; }
+.order-card { background:white; border-radius:14px; border:1px solid var(--border); padding:1.5rem;
+  margin-bottom:1.2rem; box-shadow:0 2px 12px rgba(0,0,0,0.07); border-left:6px solid var(--primary); }
+.order-card.on_the_way { border-left-color:#3b82f6; }
+.avatar { width:48px; height:48px; border-radius:50%; background:var(--primary); color:white;
+  display:flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:700; flex-shrink:0; }
+.info-row { display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:0.4rem; font-size:0.88rem; }
+.info-row i { margin-top:2px; color:var(--text-muted); flex-shrink:0; }
+.items-grid { display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.75rem 0; }
+.item-pill { background:var(--primary-light); color:var(--primary-dark); border-radius:20px;
+  padding:4px 12px; font-size:0.82rem; font-weight:600; }
+.receipt-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.6rem 1rem; font-size:0.85rem; }
+{% endblock %}
+
+{% block content %}
+<div class="delivery-header">
+  <div class="container">
+    <h1 style="font-family:'Libre Baskerville',serif;"><i class="bi bi-truck me-3" style="color:var(--accent);"></i>Delivery Dashboard</h1>
+    <p class="mb-0 mt-2" style="opacity:0.8;">{{ orders|length }} active order{{ orders|length|pluralize }}</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card p-3 text-center" style="border-left:4px solid var(--primary);">
+        <div class="fw-bold fs-3" style="color:var(--primary);">
+          {% for o in orders %}{% if o.delivery_status == 'preparing' %}{% with c=forloop.counter %}{% endwith %}{% endif %}{% endfor %}
+          {{ orders|length }}
+        </div>
+        <div class="text-muted small">Total Active</div>
+      </div>
+    </div>
+  </div>
+
+  {% if orders %}
+
+  {# ── Ready for pickup (preparing) ── #}
+  {% for order in orders %}{% if order.delivery_status == 'preparing' %}
+  <div class="order-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <span class="badge-preparing fw-bold fs-6">🔥 Ready for Pickup</span>
+        <code class="ms-2 text-muted small">{{ order.order_number }}</code>
+      </div>
+      <span class="fw-bold fs-5" style="color:var(--primary);">KSh {{ order.total|floatformat:0 }}</span>
+    </div>
+
+    <div class="d-flex gap-3 align-items-start">
+      <div class="avatar">{{ order.user.first_name.0|default:order.user.username.0|upper }}</div>
+      <div class="flex-grow-1">
+
+        {# Customer info #}
+        <div class="fw-bold mb-2" style="font-size:1rem;">{{ order.user.first_name|default:order.user.username }}</div>
+        <div class="info-row">
+          <i class="bi bi-telephone-fill" style="color:var(--primary);"></i>
+          <div>
+            <strong>Customer:</strong>
+            <a href="tel:{{ order.delivery_phone }}" class="fw-bold ms-1 text-decoration-none" style="color:var(--primary);">
+              {{ order.delivery_phone }}
+            </a>
+          </div>
+        </div>
+        <div class="info-row">
+          <i class="bi bi-geo-alt-fill" style="color:var(--primary);"></i>
+          <div>
+            <strong>Drop-off:</strong> {{ order.delivery_address }}
+            {% if order.delivery_area %}
+            <span class="badge ms-1" style="background:var(--primary-light);color:var(--primary-dark);">
+              📍 {{ order.delivery_area.name }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-row">
+          <i class="bi bi-clock"></i>
+          <div><strong>Ordered:</strong> {{ order.created_at|date:"d M Y, h:i A" }}</div>
+        </div>
+
+        {# Payment info #}
+        <div class="info-row">
+          <i class="bi bi-cash-stack" style="color:#10b981;"></i>
+          <div>
+            <strong>Payment:</strong>
+            <span class="badge-{{ order.payment_status }} ms-1">{{ order.get_payment_status_display }}</span>
+            {% if order.mpesa_receipt %}
+            <span class="text-muted ms-2 small">Receipt: <code>{{ order.mpesa_receipt }}</code></span>
+            {% endif %}
+          </div>
+        </div>
+
+        {# Order items #}
+        <div class="mt-2 mb-1"><strong class="small">Items:</strong></div>
+        <div class="items-grid">
+          {% for oi in order.items.all %}
+          <span class="item-pill">{{ oi.food_name }} ×{{ oi.quantity }} — KSh {{ oi.line_total|floatformat:0 }}</span>
+          {% endfor %}
+        </div>
+
+        {# Breakdown #}
+        <div class="d-flex gap-3 small text-muted mb-2">
+          <span>Subtotal: KSh {{ order.subtotal|floatformat:0 }}</span>
+          <span>Delivery: KSh {{ order.delivery_fee|floatformat:0 }}</span>
+          <span class="fw-bold" style="color:var(--dark);">Total: KSh {{ order.total|floatformat:0 }}</span>
+        </div>
+
+        {% if order.notes %}
+        <div class="alert alert-warning py-2 px-3 mb-3 small">
+          <i class="bi bi-chat-left-text me-2"></i><strong>Customer note:</strong> {{ order.notes }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'update_delivery_status' order.id %}" class="mt-3">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="on_the_way">
+          <button type="submit" class="btn btn-primary fw-bold px-4">
+            <i class="bi bi-truck me-2"></i>Pick Up — Mark On the Way
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}{% endfor %}
+
+  {# ── On the way ── #}
+  {% for order in orders %}{% if order.delivery_status == 'on_the_way' %}
+  <div class="order-card on_the_way">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <span class="badge-on_the_way fw-bold fs-6">🏍️ On the Way</span>
+        <code class="ms-2 text-muted small">{{ order.order_number }}</code>
+      </div>
+      <span class="fw-bold fs-5" style="color:#3b82f6;">KSh {{ order.total|floatformat:0 }}</span>
+    </div>
+
+    <div class="d-flex gap-3 align-items-start">
+      <div class="avatar" style="background:#3b82f6;">{{ order.user.first_name.0|default:order.user.username.0|upper }}</div>
+      <div class="flex-grow-1">
+        <div class="fw-bold mb-2" style="font-size:1rem;">{{ order.user.first_name|default:order.user.username }}</div>
+
+        <div class="info-row">
+          <i class="bi bi-telephone-fill" style="color:#3b82f6;"></i>
+          <div>
+            <strong>Customer:</strong>
+            <a href="tel:{{ order.delivery_phone }}" class="fw-bold ms-1 text-decoration-none" style="color:#3b82f6;">
+              {{ order.delivery_phone }}
+            </a>
+          </div>
+        </div>
+        <div class="info-row">
+          <i class="bi bi-geo-alt-fill" style="color:#3b82f6;"></i>
+          <div>
+            <strong>Drop-off:</strong> {{ order.delivery_address }}
+            {% if order.delivery_area %}
+            <span class="badge ms-1" style="background:#dbeafe;color:#1e40af;">
+              📍 {{ order.delivery_area.name }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-row">
+          <i class="bi bi-cash-stack" style="color:#10b981;"></i>
+          <div>
+            <strong>Payment:</strong>
+            <span class="badge-{{ order.payment_status }} ms-1">{{ order.get_payment_status_display }}</span>
+            {% if order.mpesa_receipt %}
+            <span class="text-muted ms-2 small">Receipt: <code>{{ order.mpesa_receipt }}</code></span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="items-grid">
+          {% for oi in order.items.all %}
+          <span class="item-pill" style="background:#dbeafe;color:#1e40af;">{{ oi.food_name }} ×{{ oi.quantity }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex gap-3 small text-muted mb-3">
+          <span>Subtotal: KSh {{ order.subtotal|floatformat:0 }}</span>
+          <span>Delivery: KSh {{ order.delivery_fee|floatformat:0 }}</span>
+          <span class="fw-bold" style="color:var(--dark);">Total: KSh {{ order.total|floatformat:0 }}</span>
+        </div>
+
+        <form method="POST" action="{% url 'update_delivery_status' order.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="delivered">
+          <button type="submit" class="btn btn-success fw-bold px-4">
+            <i class="bi bi-check-circle me-2"></i>✅ Mark as Delivered
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}{% endfor %}
+
+  {% else %}
+  <div class="text-center py-5">
+    <div style="font-size:4rem;" class="mb-3">🎉</div>
+    <h4 class="fw-bold">All Clear!</h4>
+    <p class="text-muted">No active deliveries right now. Check back soon.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

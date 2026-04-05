@@ -1,0 +1,70 @@
+{% extends "core/base.html" %}
+{% block title %}Order {{ order.order_number }} – Bite Nation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1><i class="bi bi-receipt me-3" style="color:var(--accent);"></i>Order Details</h1>
+    <p class="mb-0 mt-1 fw-bold" style="color:var(--accent);">{{ order.order_number }}</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card p-4 mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-box-seam me-2" style="color:var(--primary);"></i>Items Ordered</h5>
+        {% for oi in items %}
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <div><span class="fw-bold">{{ oi.food_name }}</span><span class="text-muted ms-2">× {{ oi.quantity }}</span></div>
+          <span class="fw-bold" style="color:var(--primary);">KSh {{ oi.line_total|floatformat:0 }}</span>
+        </div>
+        {% endfor %}
+        <div class="d-flex justify-content-between mt-3"><span class="text-muted">Subtotal</span><span>KSh {{ order.subtotal|floatformat:0 }}</span></div>
+        <div class="d-flex justify-content-between"><span class="text-muted">Delivery ({{ order.delivery_area.name|default:"—" }})</span><span>KSh {{ order.delivery_fee|floatformat:0 }}</span></div>
+        <div class="d-flex justify-content-between mt-2 pt-2 border-top">
+          <span class="fw-bold fs-5">Total</span>
+          <span class="fw-bold fs-5" style="color:var(--primary);">KSh {{ order.total|floatformat:0 }}</span>
+        </div>
+      </div>
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-geo-alt me-2" style="color:var(--primary);"></i>Delivery Details</h5>
+        <p class="mb-1"><strong>Address:</strong> {{ order.delivery_address }}</p>
+        <p class="mb-1"><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+        {% if order.delivery_area %}<p class="mb-1"><strong>Area:</strong> {{ order.delivery_area.name }}</p>{% endif %}
+        {% if order.notes %}<p class="mb-0"><strong>Notes:</strong> {{ order.notes }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3">Order Status</h5>
+        <div class="mb-3 p-3 rounded" style="background:#f8f9fa;">
+          <div class="small text-muted mb-1">Payment</div>
+          <span class="badge-{{ order.payment_status }}">💳 {{ order.get_payment_status_display }}</span>
+          {% if order.mpesa_receipt %}<div class="small text-muted mt-2">M-Pesa Ref: <strong>{{ order.mpesa_receipt }}</strong></div>{% endif %}
+        </div>
+        <div class="mb-3 p-3 rounded" style="background:#f8f9fa;">
+          <div class="small text-muted mb-1">Delivery</div>
+          <span class="badge-{{ order.delivery_status }}">🚚 {{ order.get_delivery_status_display }}</span>
+          {% if order.delivered_at %}<div class="small text-muted mt-2">Delivered: {{ order.delivered_at|date:"d M Y, h:i A" }}</div>{% endif %}
+        </div>
+        <div class="p-3 rounded" style="background:#f8f9fa;">
+          <div class="small text-muted mb-1">Placed On</div>
+          <strong>{{ order.created_at|date:"d M Y, h:i A" }}</strong>
+        </div>
+
+        {% if order.payment_status == 'pending' %}
+        <div class="mt-3 p-3 rounded" style="background:#fffbeb;border:1px solid #fde68a;">
+          <p class="small mb-2">⚠️ Payment not yet confirmed.</p>
+          <a href="{% url 'demo_pay' order.order_number %}" class="btn btn-success btn-sm w-100 fw-bold">
+            ✅ Simulate M-Pesa Payment (Demo)
+          </a>
+        </div>
+        {% endif %}
+        <a href="{% url 'my_orders' %}" class="btn btn-outline-secondary w-100 mt-3">← All Orders</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "core/base.html" %}
+{% block title %}Menu – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.food-card .card-img-top { height:190px; object-fit:cover; transition:transform 0.4s; }
+.food-card:hover .card-img-top { transform:scale(1.05); }
+.food-card { overflow:hidden; }
+.food-price { font-family:'Libre Baskerville',serif; font-size:1.25rem; color:var(--primary); font-weight:700; }
+.filter-btn { border-radius:30px !important; font-size:0.88rem; font-weight:500; padding:7px 18px !important; }
+.filter-btn.active { background:var(--dark) !important; border-color:var(--dark) !important; color:white !important; }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1><i class="bi bi-menu-button-wide me-3" style="color:var(--accent);"></i>Our Menu</h1>
+    <p class="mb-0 mt-2" style="opacity:0.8;">{{ items|length }} items available</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'menu' %}" class="btn btn-outline-secondary filter-btn {% if active_category == 'all' %}active{% endif %}">All Items</a>
+    {% for cat in categories %}
+    <a href="{% url 'menu' %}?category={{ cat }}" class="btn btn-outline-secondary filter-btn {% if active_category == cat %}active{% endif %}">{{ cat }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="mb-4">
+    <input type="text" id="searchInput" class="form-control form-control-lg"
+      placeholder="🔍  Search menu..." style="max-width:400px;border-radius:30px;border:2px solid var(--border);font-size:0.95rem;"
+      oninput="filterCards(this.value)">
+  </div>
+
+  {% if items %}
+  <div class="row g-4" id="menuGrid">
+    {% for item in items %}
+    <div class="col-xl-3 col-lg-4 col-md-6 menu-card-col" data-name="{{ item.name|lower }}">
+      <div class="card food-card h-100">
+        <div class="position-relative" style="overflow:hidden;border-radius:12px 12px 0 0;">
+          <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}"
+            onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=400&fit=crop'">
+          {% if item.discount_percent > 0 %}
+          <span style="position:absolute;top:10px;right:10px;background:var(--primary);color:white;font-size:0.75rem;padding:4px 10px;border-radius:20px;font-weight:700;">
+            -{{ item.discount_percent|floatformat:0 }}% OFF
+          </span>
+          {% endif %}
+          {% if item.status == 'sold_out' %}
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+            <span class="badge bg-danger" style="font-size:1rem;">Sold Out</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="badge text-bg-light" style="font-size:0.72rem;">{{ item.category }}</span>
+            <span class="badge-{{ item.status }}">
+              {% if item.status == 'available' %}Available{% elif item.status == 'limited' %}Limited{% else %}Sold Out{% endif %}
+            </span>
+          </div>
+          <h6 class="fw-bold mb-1">{{ item.name }}</h6>
+          <p class="text-muted small flex-grow-1" style="font-size:0.83rem;">{{ item.description }}</p>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+              {% if item.discount_percent > 0 %}
+              <small class="text-muted text-decoration-line-through me-1">KSh {{ item.price|floatformat:0 }}</small><br>
+              {% endif %}
+              <span class="food-price">KSh {{ item.discounted_price|floatformat:0 }}</span>
+            </div>
+            {% if item.status != 'sold_out' %}
+              {% if user.is_authenticated %}
+              <button class="btn btn-primary btn-sm"
+                onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.discounted_price }}, '{{ item.image_url }}')">
+                <i class="bi bi-plus-lg"></i> Add
+              </button>
+              {% else %}
+              <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-sm">Login</a>
+              {% endif %}
+            {% else %}
+            <button class="btn btn-secondary btn-sm" disabled>Unavailable</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-emoji-frown display-3 text-muted mb-3 d-block"></i>
+    <h5 class="text-muted">No items in this category yet</h5>
+    <a href="{% url 'menu' %}" class="btn btn-outline-primary mt-3">View All</a>
+  </div>
+  {% endif %}
+
+  {% if user.is_authenticated %}
+  <a href="{% url 'cart' %}" class="btn btn-primary" id="floatCartBtn"
+    style="position:fixed;bottom:30px;right:30px;border-radius:50px;padding:14px 24px;font-weight:700;box-shadow:0 4px 20px rgba(232,98,10,0.4);z-index:100;display:none;">
+    <i class="bi bi-bag me-2"></i>View Cart <span id="float-cart-count" class="ms-1 badge bg-white" style="color:var(--primary);">0</span>
+  </a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filterCards(q) {
+  document.querySelectorAll('.menu-card-col').forEach(col => {
+    col.style.display = col.dataset.name.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function updateFloatBtn() {
+  const count = Cart.count();
+  const btn = document.getElementById('floatCartBtn');
+  const cEl = document.getElementById('float-cart-count');
+  if (btn) btn.style.display = count > 0 ? 'block' : 'none';
+  if (cEl) cEl.textContent = count;
+}
+setInterval(updateFloatBtn, 500);
+updateFloatBtn();
+</script>
+{% endblock %}

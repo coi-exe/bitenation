@@ -1,0 +1,58 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Orders – Bite Nation Admin{% endblock %}
+{% block orders_active %}active{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0" style="font-family:'Libre Baskerville',serif;">Orders</h2>
+</div>
+
+<ul class="nav nav-pills mb-4">
+  <li class="nav-item"><a class="nav-link {% if status_filter == 'all' %}active{% endif %}" href="?status=all">All</a></li>
+  <li class="nav-item"><a class="nav-link {% if status_filter == 'paid' %}active{% endif %}" href="?status=paid">Paid</a></li>
+  <li class="nav-item"><a class="nav-link {% if status_filter == 'preparing' %}active{% endif %}" href="?status=preparing">🔥 Preparing</a></li>
+  <li class="nav-item"><a class="nav-link {% if status_filter == 'on_the_way' %}active{% endif %}" href="?status=on_the_way">🚚 On the Way</a></li>
+  <li class="nav-item"><a class="nav-link {% if status_filter == 'delivered' %}active{% endif %}" href="?status=delivered">✅ Delivered</a></li>
+</ul>
+
+{% if orders %}
+  {% for order in orders %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+          <span class="fw-bold fs-5" style="color:var(--primary);">{{ order.order_number }}</span>
+          <span class="text-muted ms-2 small">{{ order.created_at|date:"d M Y, h:i A" }}</span>
+          {% if order.delivery_area %}<span class="badge bg-light text-dark ms-2">{{ order.delivery_area.name }}</span>{% endif %}
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge-{{ order.payment_status }}">💳 {{ order.get_payment_status_display }}</span>
+          <span class="badge-{{ order.delivery_status }}">🚚 {{ order.get_delivery_status_display }}</span>
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Customer:</strong> {{ order.user.first_name|default:order.user.username }} ({{ order.user.email }})</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ order.delivery_phone }}</p>
+          <p class="mb-1"><strong>Address:</strong> {{ order.delivery_address }}</p>
+          {% if order.notes %}<p class="mb-1"><strong>Notes:</strong> {{ order.notes }}</p>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Items:</strong></p>
+          {% for oi in order.items.all %}
+          <span class="badge bg-light text-dark me-1 mb-1">{{ oi.food_name }} ×{{ oi.quantity }}</span>
+          {% endfor %}
+          <p class="mt-2 fw-bold">Total: KSh {{ order.total|floatformat:0 }}</p>
+          {% if order.mpesa_receipt %}<p class="small text-muted">M-Pesa: {{ order.mpesa_receipt }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-inbox display-3 text-muted mb-3 d-block"></i>
+  <h5 class="text-muted">No orders found</h5>
+</div>
+{% endif %}
+{% endblock %}

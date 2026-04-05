@@ -1,0 +1,138 @@
+{% extends "core/base.html" %}
+{% block title %}Your Cart – Bite Nation{% endblock %}
+
+{% block extra_styles %}
+.cart-row { background:white; border-radius:12px; padding:1.2rem; border:1px solid var(--border); margin-bottom:1rem; }
+.cart-img { width:80px; height:80px; object-fit:cover; border-radius:8px; }
+.qty-btn { width:32px; height:32px; border-radius:50%; border:2px solid var(--border); background:white;
+  font-weight:700; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+.qty-btn:hover { border-color:var(--primary); color:var(--primary); }
+.summary-card { background:white; border-radius:12px; padding:1.5rem; border:1px solid var(--border); position:sticky; top:80px; }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1><i class="bi bi-bag me-3" style="color:var(--accent);"></i>Your Cart</h1>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+    <div class="col-lg-8" id="cartItemsCol"></div>
+    <div class="col-lg-4">
+      <div class="summary-card">
+        <h5 class="fw-bold mb-4">Order Summary</h5>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold small">Delivery Area</label>
+          <select id="areaSelect" class="form-select" onchange="updateDeliveryFee()">
+            <option value="" data-fee="100">Select area...</option>
+            {% for area in areas %}
+            <option value="{{ area.id }}" data-fee="{{ area.delivery_fee }}">
+              {{ area.name }} – KSh {{ area.delivery_fee|floatformat:0 }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Subtotal</span>
+          <span class="fw-bold" id="summarySubtotal">KSh 0</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Delivery Fee</span>
+          <span class="fw-bold" id="summaryDelivery">KSh 100</span>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between mb-4">
+          <span class="fw-bold fs-5">Total</span>
+          <span class="fw-bold fs-5" style="color:var(--primary);" id="summaryTotal">KSh 100</span>
+        </div>
+        <a href="{% url 'checkout' %}" class="btn btn-primary w-100 btn-lg fw-bold" id="checkoutBtn">
+          <i class="bi bi-phone me-2"></i>Checkout with M-Pesa
+        </a>
+        <a href="{% url 'menu' %}" class="btn btn-outline-secondary w-100 mt-2">
+          <i class="bi bi-arrow-left me-2"></i>Continue Shopping
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let deliveryFee = 100;
+
+function updateDeliveryFee() {
+  const sel = document.getElementById('areaSelect');
+  const opt = sel.options[sel.selectedIndex];
+  deliveryFee = parseFloat(opt.dataset.fee) || 100;
+  // store area selection for checkout
+  localStorage.setItem('bn_area_id', sel.value);
+  renderCart();
+}
+
+function renderCart() {
+  const cart = Cart.get();
+  const col = document.getElementById('cartItemsCol');
+
+  if (cart.length === 0) {
+    col.innerHTML = `<div class="text-center py-5">
+      <i class="bi bi-bag-x display-3 text-muted mb-3 d-block"></i>
+      <h5 class="text-muted">Your cart is empty</h5>
+      <a href="{% url 'menu' %}" class="btn btn-primary mt-3 px-4">Browse Menu</a>
+    </div>`;
+    document.getElementById('summarySubtotal').textContent = 'KSh 0';
+    document.getElementById('summaryDelivery').textContent = `KSh ${deliveryFee}`;
+    document.getElementById('summaryTotal').textContent = `KSh ${deliveryFee}`;
+    document.getElementById('checkoutBtn').classList.add('disabled');
+    return;
+  }
+
+  document.getElementById('checkoutBtn').classList.remove('disabled');
+  col.innerHTML = cart.map(item => `
+    <div class="cart-row d-flex gap-3 align-items-center">
+      <img src="${item.image}" class="cart-img" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop'">
+      <div class="flex-grow-1">
+        <h6 class="fw-bold mb-1">${item.name}</h6>
+        <div style="color:var(--primary);font-family:'Libre Baskerville',serif;font-size:1.1rem;">KSh ${item.price.toFixed(0)}</div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+          <span class="fw-bold px-2">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+        </div>
+      </div>
+      <div class="text-end">
+        <div class="fw-bold" style="font-size:1.1rem;color:var(--primary);">KSh ${(item.price * item.qty).toFixed(0)}</div>
+        <button class="btn btn-sm btn-outline-danger mt-2" onclick="removeItem(${item.id})"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+
+  const subtotal = Cart.total();
+  document.getElementById('summarySubtotal').textContent = `KSh ${subtotal.toFixed(0)}`;
+  document.getElementById('summaryDelivery').textContent = `KSh ${deliveryFee}`;
+  document.getElementById('summaryTotal').textContent = `KSh ${(subtotal + deliveryFee).toFixed(0)}`;
+}
+
+function changeQty(id, delta) {
+  const cart = Cart.get();
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) Cart.remove(id); else { Cart.save(cart); Cart.updateBadge(); }
+  renderCart();
+}
+function removeItem(id) { Cart.remove(id); renderCart(); }
+
+renderCart();
+// Restore area selection if returning to cart
+const savedArea = localStorage.getItem('bn_area_id');
+if (savedArea) {
+  document.getElementById('areaSelect').value = savedArea;
+  updateDeliveryFee();
+}
+</script>
+{% endblock %}

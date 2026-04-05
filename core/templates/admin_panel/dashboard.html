@@ -1,0 +1,95 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Admin Dashboard – Bite Nation{% endblock %}
+{% block dash_active %}active{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0" style="font-family:'Libre Baskerville',serif;">Dashboard</h2>
+  <span class="text-muted small">Bite Nation Admin</span>
+</div>
+
+<div class="row g-4 mb-5">
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <div style="width:48px;height:48px;border-radius:12px;background:#fff3ec;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+          <i class="bi bi-receipt fs-3" style="color:var(--primary);"></i>
+        </div>
+        <div><div class="text-muted small">Total Orders</div><div class="fw-bold fs-3">{{ total_orders }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <div style="width:48px;height:48px;border-radius:12px;background:#d1fae5;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+          <i class="bi bi-check-circle fs-3" style="color:#10b981;"></i>
+        </div>
+        <div><div class="text-muted small">Paid Orders</div><div class="fw-bold fs-3">{{ paid_orders }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <div style="width:48px;height:48px;border-radius:12px;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+          <i class="bi bi-fire fs-3" style="color:#d97706;"></i>
+        </div>
+        <div><div class="text-muted small">Preparing</div><div class="fw-bold fs-3">{{ preparing }}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3">
+      <div class="d-flex align-items-center">
+        <div style="width:48px;height:48px;border-radius:12px;background:#dbeafe;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+          <i class="bi bi-truck fs-3" style="color:#2563eb;"></i>
+        </div>
+        <div><div class="text-muted small">On the Way</div><div class="fw-bold fs-3">{{ on_way }}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4 p-3 d-inline-flex align-items-center gap-3" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));border:none;">
+  <i class="bi bi-currency-dollar text-white fs-2"></i>
+  <div>
+    <div class="text-white opacity-75 small">Total Revenue</div>
+    <div class="text-white fw-bold fs-3">KSh {{ total_revenue|floatformat:0 }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header bg-white py-3">
+    <h5 class="fw-bold mb-0">Recent Orders</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead style="background:#f8f9fa;">
+        <tr>
+          <th class="px-4 py-3">Order #</th>
+          <th class="py-3">Customer</th>
+          <th class="py-3">Area</th>
+          <th class="py-3">Total</th>
+          <th class="py-3">Payment</th>
+          <th class="py-3">Delivery</th>
+          <th class="py-3">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in recent_orders %}
+        <tr>
+          <td class="px-4 fw-bold" style="color:var(--primary);">{{ order.order_number }}</td>
+          <td>{{ order.user.first_name|default:order.user.username }}</td>
+          <td class="small text-muted">{{ order.delivery_area.name|default:"—" }}</td>
+          <td class="fw-bold">KSh {{ order.total|floatformat:0 }}</td>
+          <td><span class="badge-{{ order.payment_status }}">{{ order.get_payment_status_display }}</span></td>
+          <td><span class="badge-{{ order.delivery_status }}">{{ order.get_delivery_status_display }}</span></td>
+          <td class="text-muted small">{{ order.created_at|date:"d/m H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
