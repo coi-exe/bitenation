@@ -1,6 +1,6 @@
 # 🍔 Bitenation 🍔
 
-A Django-powered web application with integrated M-Pesa (Safaricom) payment processing.
+A Django-powered full stack web application with integrated M-Pesa payment processing and a built in panel for delivery and kitchen staff.
 
 ---
 
@@ -144,3 +144,7 @@ bitenation/
 ##  License
 
 This project is open source. Feel free to fork and build on it.
+
+## Author
+
+Tabitha Gichuki - 2026
